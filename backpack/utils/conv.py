@@ -53,11 +53,20 @@ def check_sizes_output_jac(jmp, module):
             "Expected all dimensions to match, except for the first.".format(
                 jmp.size(), module.output_shape))
 
-def extract_weight_diagonal(module, input, grad_output):
+
+def extract_weight_diagonal(module, input, grad_output, input2=None, grad_output2=None):
     """
     input must be the unfolded input to the convolution (see unfold_func)
     and grad_output the backpropagated gradient
     """
-    grad_output_viewed = separate_channels_and_pixels(module, grad_output)
-    AX = einsum('bkl,bmlc->cbkm', (input, grad_output_viewed))
-    return (AX ** 2).sum([0, 1]).transpose(0, 1)
+    if input2 is None or grad_output2 is None:
+        grad_output_viewed = separate_channels_and_pixels(module, grad_output)
+        AX = einsum('bkl,bmlc->cbkm', (input, grad_output_viewed))
+        return (AX ** 2).sum([0, 1]).transpose(0, 1)
+    else:
+        grad_output_viewed = separate_channels_and_pixels(module, grad_output)
+        grad_output_viewed2 = separate_channels_and_pixels(module, grad_output2)
+        AX = einsum('bkl,bmlc->cbkm', (input, grad_output_viewed))
+        AX2 = einsum('bkl,bmlc->cbkm', (input2, grad_output_viewed2))
+        return AX.mul(AX2).sum([0, 1]).transpose(0, 1)
+
