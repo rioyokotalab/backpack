@@ -82,10 +82,7 @@ class DiagGGNMC(DiagGGN):
                          savefield="diag_ggn_mc")
 
 
-class DiagGGNFR(BackpropExtension):
-    VALID_LOSS_HESSIAN_STRATEGIES = [
-        LossHessianStrategy.EXACT, LossHessianStrategy.SAMPLING
-    ]
+class DiagGGNFR(BackpropExtension, DiagGGN):
 
     def __init__(self,
                  loss_hessian_strategy=LossHessianStrategy.EXACT,
