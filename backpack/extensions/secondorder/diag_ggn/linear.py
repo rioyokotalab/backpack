@@ -29,28 +29,70 @@ class DiagGGNLinearConcat(DiagGGNBaseModule):
         return einsum('bic,bj->ij', (backproped ** 2, input ** 2))
 
 
-class DiagGGNFRLinear(DiagGGNLinear):
+class DiagGGNLinearEfficient(DiagGGNBaseModule):
+    def __init__(self):
+        super().__init__(
+            derivatives=LinearDerivatives(),
+            params=["bias", "weight"]
+        )
+
+        self._bias_is_called_before_weight = False
+        self._weight_is_called_before_bias = False
+        self._attr_sq_bp = 'sq_bp'
 
     def bias(self, ext, module, grad_inp, grad_out, backproped):
-        attr = 'last_backproped'
+        attr = self._attr_sq_bp
+
+        if not self._weight_is_called_before_bias:
+            self._bias_is_called_before_weight = True
+            sq_bp = self._get_squared_bp(backproped)
+            setattr(self, attr, sq_bp)
+        else:
+            sq_bp = getattr(self, attr)
+            self._weight_is_called_before_bias = False
+            delattr(self, attr)
+
+        return einsum('bic->i', (sq_bp,))
+
+    def weight(self, ext, module, grad_inp, grad_out, backproped):
+        attr = self._attr_sq_bp
+
+        if not self._bias_is_called_before_weight:
+            self._weight_is_called_before_bias = True
+            sq_bp = self._get_squared_bp(backproped)
+            setattr(self, attr, sq_bp)
+        else:
+            sq_bp = getattr(self, attr)
+            self._bias_is_called_before_weight = False
+            delattr(self, attr)
+
+        return einsum('bic,bj->ij', (sq_bp, self._get_squared_inp0(module.input0)))
+
+    def _get_squared_bp(self, backproped):
+        return backproped ** 2
+
+    def _get_squared_inp0(self, inp0):
+        return inp0 ** 2
+
+
+class DiagGGNFRLinear(DiagGGNLinearEfficient):
+
+    def _get_squared_bp(self, backproped):
+        attr = 'last_bp'
         last_bp = getattr(self, attr, None)
         if last_bp is None:
             setattr(self, attr, backproped)
-            return einsum('bic->i', (backproped ** 2,))
+            return backproped ** 2
         else:
             delattr(self, attr)
-            return einsum('bic->i', (backproped.mul(last_bp)))
+            return backproped.mul(last_bp)
 
-    def weight(self, ext, module, grad_inp, grad_out, backproped):
-        attr_bp = 'last_backproped'
-        attr_inp0 = 'last_input0'
-        last_bp = getattr(self, attr_bp, None)
-        last_inp0 = getattr(self, attr_inp0, None)
-        if last_bp is None:
-            setattr(self, attr_bp, backproped)
-            setattr(self, attr_inp0, module.input0)
-            return einsum('bic,bj->ij', (backproped ** 2, module.input0 ** 2))
+    def _get_squared_inp0(self, inp0):
+        attr = 'last_inp0'
+        last_inp0 = getattr(self, attr, None)
+        if last_inp0 is None:
+            setattr(self, attr, inp0)
+            return inp0 ** 2
         else:
-            delattr(self, attr_bp)
-            delattr(self, attr_inp0)
-            return einsum('bic,bj->ij', (backproped.mul(last_bp), module.input0.mul(last_inp0)))
+            delattr(self, attr)
+            return inp0.mul(last_inp0)
