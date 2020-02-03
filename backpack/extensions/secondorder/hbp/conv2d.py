@@ -14,24 +14,35 @@ class HBPConv2d(HBPBaseModule):
         super().__init__(derivatives=Conv2DDerivatives(),
                          params=["weight", "bias"])
 
+        self._weight_kron_factors = []
+        self._bias_kron_factors = []
+        self._weight_is_called_before_bias = False
+        self._bias_is_called_before_weight = False
+
     def weight(self, ext, module, g_inp, g_out, backproped):
         bp_strategy = ext.get_backprop_strategy()
 
-        if BackpropStrategy.is_batch_average(bp_strategy):
-            return self._weight_for_batch_average(ext, module, backproped)
+        if not self._bias_is_called_before_weight:
+            self._weight_is_called_before_bias = True
+            if BackpropStrategy.is_batch_average(bp_strategy):
+                self._weight_kron_factors = self._weight_for_batch_average(ext, module, backproped)
+            elif BackpropStrategy.is_sqrt(bp_strategy):
+                self._weight_kron_factors = self._weight_for_sqrt(ext, module, backproped)
+        else:
+            self._weight_kron_factors = self._bias_kron_factors
+            self._bias_is_called_before_weight = False
 
-        elif BackpropStrategy.is_sqrt(bp_strategy):
-            return self._weight_for_sqrt(ext, module, backproped)
+        self._weight_kron_factors += self._factors_from_input(ext, module)
+
+        return self._weight_kron_factors
 
     # TODO: Require tests
     def _weight_for_batch_average(self, ext, module, backproped):
         kron_factors = [self._factor_from_batch_average(module, backproped)]
-        kron_factors += self._factors_from_input(ext, module)
         return kron_factors
 
     def _weight_for_sqrt(self, ext, module, backproped):
         kron_factors = [self._factor_from_sqrt(module, backproped)]
-        kron_factors += self._factors_from_input(ext, module)
         return kron_factors
 
     def _factors_from_input(self, ext, module):
@@ -54,10 +65,18 @@ class HBPConv2d(HBPBaseModule):
     def bias(self, ext, module, g_inp, g_out, backproped):
         bp_strategy = ext.get_backprop_strategy()
 
-        if BackpropStrategy.is_batch_average(bp_strategy):
-            return self._bias_for_batch_average(module, backproped)
-        elif BackpropStrategy.is_sqrt(bp_strategy):
-            return self._bias_for_sqrt(module, backproped)
+        if not self._weight_is_called_before_bias:
+            self._bias_is_called_before_weight = True
+
+            if BackpropStrategy.is_batch_average(bp_strategy):
+                self._bias_kron_factors = self._bias_for_batch_average(module, backproped)
+            elif BackpropStrategy.is_sqrt(bp_strategy):
+                self._bias_kron_factors = self._bias_for_sqrt(module, backproped)
+        else:
+            self._bias_kron_factors = [self._weight_kron_factors[0]]
+            self._weight_is_called_before_bias = False
+
+        return self._bias_kron_factors
 
     def _bias_for_sqrt(self, module, backproped):
         return [self._factor_from_sqrt(module, backproped)]
