@@ -21,6 +21,7 @@ class HBPLinear(HBPBaseModule):
 
         if not self._bias_is_called_before_weight:
             self._weight_is_called_before_bias = True
+
             if BackpropStrategy.is_batch_average(bp_strategy):
                 self._weight_kron_factors = self._weight_for_batch_average(ext, module, backproped)
             elif BackpropStrategy.is_sqrt(bp_strategy):
