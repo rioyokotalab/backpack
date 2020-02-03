@@ -32,27 +32,25 @@ class DiagGGNLinearConcat(DiagGGNBaseModule):
 class DiagGGNFRLinear(DiagGGNLinear):
 
     def bias(self, ext, module, grad_inp, grad_out, backproped):
-        param = module.bias
         attr = 'last_backproped'
-        last_bp = getattr(param, attr, None)
+        last_bp = getattr(self, attr, None)
         if last_bp is None:
-            setattr(param, attr, backproped)
+            setattr(self, attr, backproped)
             return einsum('bic->i', (backproped ** 2,))
         else:
-            delattr(param, attr)
+            delattr(self, attr)
             return einsum('bic->i', (backproped.mul(last_bp)))
 
     def weight(self, ext, module, grad_inp, grad_out, backproped):
-        param = module.weight
         attr_bp = 'last_backproped'
         attr_inp0 = 'last_input0'
-        last_bp = getattr(param, attr_bp, None)
-        last_inp0 = getattr(param, attr_inp0, None)
+        last_bp = getattr(self, attr_bp, None)
+        last_inp0 = getattr(self, attr_inp0, None)
         if last_bp is None:
-            setattr(param, attr_bp, backproped)
-            setattr(param, attr_inp0, module.input0)
+            setattr(self, attr_bp, backproped)
+            setattr(self, attr_inp0, module.input0)
             return einsum('bic,bj->ij', (backproped ** 2, module.input0 ** 2))
         else:
-            delattr(param, attr_bp)
-            delattr(param, attr_inp0)
+            delattr(self, attr_bp)
+            delattr(self, attr_inp0)
             return einsum('bic,bj->ij', (backproped.mul(last_bp), module.input0.mul(last_inp0)))
