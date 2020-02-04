@@ -242,11 +242,9 @@ class HBPFRConv2d(HBPConv2dEfficient):
             X = convUtils.unfold_func(module)(module.input0)
             batch = X.size(0)
             if last_X is None:
-                print('conv2d factors input 1st')
                 setattr(module, attr, X)
                 yield einsum('bik,bjk->ij', (X, X)) / batch
             else:
-                print('conv2d factors input 2nd')
                 delattr(module, attr)
                 yield einsum('bik,bjk->ij', (X, last_X)) / batch
 
@@ -257,11 +255,9 @@ class HBPFRConv2d(HBPConv2dEfficient):
         sqrt_ggn = convUtils.separate_channels_and_pixels(module, sqrt_ggn)
         sqrt_ggn = einsum('bijc->bic', (sqrt_ggn, ))
         if last_sqrt_ggn is None:
-            print('conv2d factors sqrt 1st')
             setattr(module, attr, sqrt_ggn)
             return einsum('bic,blc->il', (sqrt_ggn, sqrt_ggn))
         else:
-            print('conv2d factors sqrt 2nd')
             delattr(module, attr)
             return einsum('bic,blc->il', (sqrt_ggn, last_sqrt_ggn))
 

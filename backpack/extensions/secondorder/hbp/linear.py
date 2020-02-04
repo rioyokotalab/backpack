@@ -240,11 +240,9 @@ class HBPFRLinear(HBPLinearEfficient):
         last_fl_inp = getattr(module, attr, None)
         N, flat_input = self.derivatives.batch_flat(module.input0)
         if last_fl_inp is None:
-            print('linear factor input 1st')
             setattr(module, attr, flat_input)
             return einsum('bi,bj->ij', (flat_input, flat_input)) / N
         else:
-            print('linear factor input 2nd')
             delattr(module, attr)
             return einsum('bi,bj->ij', (flat_input, last_fl_inp)) / N
 
@@ -252,11 +250,9 @@ class HBPFRLinear(HBPLinearEfficient):
         attr = 'last_backproped'
         last_bp = getattr(module, attr, None)
         if last_bp is None:
-            print('linear factor sqrt 1st')
             setattr(module, attr, backproped)
             return [einsum('bic,bjc->ij', (backproped, backproped))]
         else:
-            print('linear factor sqrt 2nd')
             delattr(module, attr)
             return [einsum('bic,bjc->ij', (backproped, last_bp))]
 
