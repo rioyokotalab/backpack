@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 from backpack import backpack, extend
-from backpack.extensions import KFLR, KFLREfficient, DiagGGNExact, DiagGGNExactEfficient
+from backpack.extensions import KFLR, KFLREfficient
 from backpack.core.layers import Flatten
 
 from timeit import timeit
@@ -26,7 +26,7 @@ def benchmark(model, loss_fn, x, target, ext, loop=100):
     print(f'{ext.__class__.__name__}: {elapsed - fwd_elapsed:.3f}s')
 
 
-def test(model, loss_fn, x, target, ext1, ext2, thr=1e-8):
+def test(model, loss_fn, x, target, ext1, ext2):
 
     with backpack(ext1):
         output = model(x)
@@ -48,10 +48,10 @@ def test(model, loss_fn, x, target, ext1, ext2, thr=1e-8):
         if isinstance(last_value, list):
             for v, last_v in zip(value, last_value):
                 err = (v - last_v).abs().max()
-                assert err < thr, err
+                assert err == 0, err
         else:
             err = (value - last_value).abs().max()
-            assert err < thr, err
+            assert err == 0, err
 
 
 def main():
@@ -100,12 +100,9 @@ def main():
     target = target.to(device)
 
     test(model, loss_fn, x, target, KFLR(), KFLREfficient())
-    test(model, loss_fn, x, target, DiagGGNExact(), DiagGGNExactEfficient())
 
     benchmark(model, loss_fn, x, target, KFLR(), loop)
     benchmark(model, loss_fn, x, target, KFLREfficient(), loop)
-    benchmark(model, loss_fn, x, target, DiagGGNExact(), loop)
-    benchmark(model, loss_fn, x, target, DiagGGNExactEfficient(), loop)
 
 
 if __name__ == '__main__':

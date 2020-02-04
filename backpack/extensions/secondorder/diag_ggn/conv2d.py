@@ -18,7 +18,7 @@ class DiagGGNConv2d(DiagGGNBaseModule):
     def weight(self, ext, module, grad_inp, grad_out, backproped):
         X = convUtils.unfold_func(module)(module.input0)
         weight_diag = convUtils.extract_weight_diagonal(module, X, backproped)
-        return weight_diag .view_as(module.weight)
+        return weight_diag.view_as(module.weight)
 
 
 class DiagGGNConv2dConcat(DiagGGNBaseModule):
@@ -38,77 +38,32 @@ class DiagGGNConv2dConcat(DiagGGNBaseModule):
         return weight_diag.view_as(module.weight)
 
 
-class DiagGGNConv2dEfficient(DiagGGNBaseModule):
-    def __init__(self):
-        super().__init__(
-            derivatives=Conv2DDerivatives(),
-            params=["bias", "weight"]
-        )
-
-        self._bias_is_called_before_weight = False
-        self._weight_is_called_before_bias = False
-        self._attr_sq_bp = 'sq_bp'
+class DiagGGNFRConv2d(DiagGGNConv2d):
 
     def bias(self, ext, module, grad_inp, grad_out, backproped):
-        attr = self._attr_sq_bp
-
-        if not self._weight_is_called_before_bias:
-            self._bias_is_called_before_weight = True
-            sq_bp = self._get_squared_bp(module, backproped)
-            setattr(self, attr, sq_bp)
+        attr = 'last_sqrt_ggn'
+        last_sqrt_ggn = getattr(module, attr, None)
+        sqrt_ggn = convUtils.separate_channels_and_pixels(module, backproped)
+        if last_sqrt_ggn is None:
+            setattr(module, attr, sqrt_ggn)
+            return einsum('bijc,bikc->i', (sqrt_ggn, sqrt_ggn))
         else:
-            sq_bp = getattr(self, attr)
-            self._weight_is_called_before_bias = False
-            delattr(self, attr)
-
-        return einsum('bijc->i', (sq_bp,))
+            delattr(module, attr)
+            return einsum('bijc,bikc->i', (sqrt_ggn, last_sqrt_ggn))
 
     def weight(self, ext, module, grad_inp, grad_out, backproped):
-        attr = self._attr_sq_bp
-
-        if not self._bias_is_called_before_weight:
-            self._weight_is_called_before_bias = True
-            sq_bp = self._get_squared_bp(module, backproped)
-            setattr(self, attr, sq_bp)
-        else:
-            sq_bp = getattr(self, attr)
-            self._bias_is_called_before_weight = False
-            delattr(self, attr)
-
+        attr_bp = 'last_backproped'
+        attr_X = 'last_X'
+        last_bp = getattr(module, attr_bp, None)
         X = convUtils.unfold_func(module)(module.input0)
-        sq_X = self._get_squared_X(X)
-        sq_X_bp = einsum('bkl,bmlc->cbkm', (sq_X, sq_bp))
-        weight_diag = sq_X_bp.sum([0, 1]).transpose(0, 1)
-
-        return weight_diag.view_as(module.weight)
-
-    def _get_squared_bp(self, module, backproped):
-        bp_viewed = convUtils.separate_channels_and_pixels(module, backproped)
-        return bp_viewed ** 2
-
-    def _get_squared_X(self, X):
-        return X ** 2
-
-
-class DiagGGNFRConv2d(DiagGGNConv2dEfficient):
-
-    def _get_squared_bp(self, module, backproped):
-        attr = 'last_bp_viewed'
-        last_bp_viewed = getattr(self, attr, None)
-        bp_viewed = convUtils.separate_channels_and_pixels(module, backproped)
-        if last_bp_viewed is None:
-            setattr(self, attr, bp_viewed)
-            return bp_viewed ** 2
+        if last_bp is None:
+            setattr(module, attr_bp, backproped)
+            setattr(module, attr_X, X)
+            weight_diag = convUtils.extract_weight_diagonal(module, X, backproped)
+            return weight_diag.view_as(module.weight)
         else:
-            delattr(self, attr)
-            return bp_viewed * last_bp_viewed
-
-    def _get_squared_X(self, X):
-        attr = 'last_X'
-        last_X = getattr(self, attr, None)
-        if last_X is None:
-            setattr(self, attr, X)
-            return X ** 2
-        else:
-            delattr(self, attr)
-            return X * last_X
+            delattr(module, attr_bp)
+            delattr(module, attr_X)
+            last_X = getattr(module, attr_X, None)
+            weight_diag = convUtils.extract_weight_diagonal(module, X, backproped, last_X, last_bp)
+            return weight_diag.view_as(module.weight)

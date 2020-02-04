@@ -16,6 +16,6 @@ to second-order information, such as
 - `HBP`: A general framework that encompasses KFAC, KFRA and KFLR.
 """
 
-from .diag_ggn import DiagGGN, DiagGGNExact, DiagGGNMC, DiagGGNEfficient, DiagGGNExactEfficient, DiagGGNFR, DiagGGNExactFR  # NOQA
+from .diag_ggn import DiagGGN, DiagGGNExact, DiagGGNMC, DiagGGNFR, DiagGGNExactFR  # NOQA
 from .diag_hessian import DiagHessian
 from .hbp import HBP, KFAC, KFLR, KFRA, KFACEfficient, KFLREfficient, KFACFR, KFLRFR  # NOQA

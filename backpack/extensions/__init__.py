@@ -8,5 +8,4 @@ from .secondorder import (HBP, KFAC, KFLR, KFRA,
                           KFACEfficient, KFLREfficient,
                           KFACFR, KFLRFR,
                           DiagGGN, DiagGGNExact, DiagGGNMC,
-                          DiagGGNEfficient, DiagGGNExactEfficient,
                           DiagGGNFR, DiagGGNExactFR, DiagHessian)
