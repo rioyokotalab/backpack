@@ -117,28 +117,47 @@ class HBPConv2dEfficient(HBPBaseModule):
         super().__init__(derivatives=Conv2DDerivatives(),
                          params=["weight", "bias"])
 
-        self._weight_kron_factors = []
-        self._bias_kron_factors = []
-        self._weight_is_called_before_bias = False
-        self._bias_is_called_before_weight = False
+        self._attr = 'kron_factors_from_sqrt'
+
+    def _set_bias_flag(self, module, value):
+        attr = '_bias_is_called_before_weight'
+        setattr(module, attr, value)
+
+    def _get_bias_flag(self, module):
+        attr = '_bias_is_called_before_weight'
+        return getattr(module, attr, False)
+
+    def _set_weight_flag(self, module, value):
+        attr = '_weight_is_called_before_weight'
+        setattr(module, attr, value)
+
+    def _get_weight_flag(self, module):
+        attr = '_weight_is_called_before_weight'
+        return getattr(module, attr, False)
 
     def weight(self, ext, module, g_inp, g_out, backproped):
         bp_strategy = ext.get_backprop_strategy()
+        attr = self._attr
 
-        if not self._bias_is_called_before_weight:
-            self._weight_is_called_before_bias = True
+        kron_factors = None
+
+        if not self._get_bias_flag(module):
+            self._set_weight_flag(module, True)
 
             if BackpropStrategy.is_batch_average(bp_strategy):
-                self._weight_kron_factors = self._weight_for_batch_average(ext, module, backproped)
+                kron_factors = self._weight_for_batch_average(ext, module, backproped)
             elif BackpropStrategy.is_sqrt(bp_strategy):
-                self._weight_kron_factors = self._weight_for_sqrt(ext, module, backproped)
+                kron_factors = self._weight_for_sqrt(ext, module, backproped)
+
+            setattr(module, attr, kron_factors)
         else:
-            self._weight_kron_factors = self._bias_kron_factors
-            self._bias_is_called_before_weight = False
+            kron_factors = getattr(module, attr)
+            self._set_bias_flag(module, False)
+            delattr(module, attr)
 
-        self._weight_kron_factors += self._factors_from_input(ext, module)
+        kron_factors += self._factors_from_input(ext, module)
 
-        return self._weight_kron_factors
+        return kron_factors
 
     # TODO: Require tests
     def _weight_for_batch_average(self, ext, module, backproped):
@@ -168,19 +187,25 @@ class HBPConv2dEfficient(HBPBaseModule):
 
     def bias(self, ext, module, g_inp, g_out, backproped):
         bp_strategy = ext.get_backprop_strategy()
+        attr = self._attr
 
-        if not self._weight_is_called_before_bias:
-            self._bias_is_called_before_weight = True
+        kron_factors = None
+
+        if not self._get_weight_flag(module):
+            self._set_bias_flag(module, True)
 
             if BackpropStrategy.is_batch_average(bp_strategy):
-                self._bias_kron_factors = self._bias_for_batch_average(module, backproped)
+                kron_factors = self._bias_for_batch_average(module, backproped)
             elif BackpropStrategy.is_sqrt(bp_strategy):
-                self._bias_kron_factors = self._bias_for_sqrt(module, backproped)
-        else:
-            self._bias_kron_factors = [self._weight_kron_factors[0]]
-            self._weight_is_called_before_bias = False
+                kron_factors = self._bias_for_sqrt(module, backproped)
 
-        return self._bias_kron_factors
+            setattr(module, attr, kron_factors)
+        else:
+            kron_factors = getattr(module, attr)
+            self._set_weight_flag(module, False)
+            delattr(module, attr)
+
+        return kron_factors
 
     def _bias_for_sqrt(self, module, backproped):
         return [self._factor_from_sqrt(module, backproped)]
@@ -213,27 +238,31 @@ class HBPFRConv2d(HBPConv2dEfficient):
             raise NotImplementedError("Undefined")
         else:
             attr = 'last_X'
-            last_X = getattr(self, attr, None)
+            last_X = getattr(module, attr, None)
             X = convUtils.unfold_func(module)(module.input0)
             batch = X.size(0)
             if last_X is None:
-                setattr(self, attr, X)
+                print('conv2d factors input 1st')
+                setattr(module, attr, X)
                 yield einsum('bik,bjk->ij', (X, X)) / batch
             else:
-                delattr(self, attr)
+                print('conv2d factors input 2nd')
+                delattr(module, attr)
                 yield einsum('bik,bjk->ij', (X, last_X)) / batch
 
     def _factor_from_sqrt(self, module, backproped):
         attr = 'last_sqrt_ggn'
-        last_sqrt_ggn = getattr(self, attr, None)
+        last_sqrt_ggn = getattr(module, attr, None)
         sqrt_ggn = backproped
         sqrt_ggn = convUtils.separate_channels_and_pixels(module, sqrt_ggn)
         sqrt_ggn = einsum('bijc->bic', (sqrt_ggn, ))
         if last_sqrt_ggn is None:
-            setattr(self, attr, sqrt_ggn)
+            print('conv2d factors sqrt 1st')
+            setattr(module, attr, sqrt_ggn)
             return einsum('bic,blc->il', (sqrt_ggn, sqrt_ggn))
         else:
-            delattr(self, attr)
+            print('conv2d factors sqrt 2nd')
+            delattr(module, attr)
             return einsum('bic,blc->il', (sqrt_ggn, last_sqrt_ggn))
 
 
