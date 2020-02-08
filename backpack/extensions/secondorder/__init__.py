@@ -19,3 +19,4 @@ to second-order information, such as
 from .diag_ggn import DiagGGN, DiagGGNExact, DiagGGNMC, DiagGGNFR, DiagGGNExactFR  # NOQA
 from .diag_hessian import DiagHessian
 from .hbp import HBP, KFAC, KFLR, KFRA, KFACEfficient, KFLREfficient, KFACFR, KFLRFR  # NOQA
+from .loss_hessian import LossHessian, LossHessianExact, LossHessianMC  # NOQA
