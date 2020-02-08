@@ -6,3 +6,4 @@ examples/data
 .idea
 dist/*
 build/*
+venv
