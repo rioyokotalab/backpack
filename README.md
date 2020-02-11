@@ -1,4 +1,4 @@
-# A fork of BackPaCK
+# A fork of [BackPACK](https://github.com/f-dangel/backpack)
 
 ## Installation
 ```bash
