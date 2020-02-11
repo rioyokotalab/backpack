@@ -27,10 +27,6 @@ def forward_postprocess(module, inp, output):
 
 def jacobian_with_loop(model, x):
 
-    handles = []
-    for module in model.children():
-        handles.append(module.register_forward_hook(forward_postprocess))
-
     output = model(x)
 
     bs = x.size(0)
@@ -49,9 +45,6 @@ def jacobian_with_loop(model, x):
 
         for p in model.parameters():
             p.jacobian[i] = p.grads
-
-    for handle in handles:
-        handle.remove()
 
 
 def jacobian_with_backpack(model, x, jac_ext):
@@ -107,13 +100,21 @@ def main():
 
     x = torch.rand(bs, input_ndim, device=device)
 
+    handles = []
+    for module in model.children():
+        handles.append(module.register_forward_hook(forward_postprocess))
+
+    elapsed = timeit(lambda: jacobian_with_loop(model, x), number=trial)
+    print(f'jacobian with loop: {elapsed:.3f}s')
+
+    for handle in handles:
+        handle.remove()
+
     model = extend(model)  # for BackPACK
     ext = Jacobian(start=modules[-1])  # for BackPACK
 
     elapsed = timeit(lambda: jacobian_with_backpack(model, x, ext), number=trial)
     print(f'jacobian with backpack: {elapsed:.3f}s')
-    elapsed = timeit(lambda: jacobian_with_loop(model, x), number=trial)
-    print(f'jacobian with loop: {elapsed:.3f}s')
 
 
 if __name__ == '__main__':
