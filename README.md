@@ -1,17 +1,14 @@
-# BACKpropagation PACKage - a backpack for `PyTorch`
-
-A backpack for PyTorch that extends the backward pass of feedforward networks to compute quantities beyond the gradient.
-
-Check out the [examples](https://f-dangel.github.io/backpack/) on how to use the code.
+# A fork of BackPaCK
 
 ## Installation
 ```bash
-pip install backpack-for-pytorch
+git clone git@github.com:rioyokotalab/backpack.git
+cd ~/backpack
+pip install -e .
 ```
 
-Alternative: Clone the repository and run `setup.py`
+## Jacobian computation by BackPaCK vs for loop
 ```bash
-git clone https://github.com/f-dangel/backpack.git ~/backpack
-cd ~/backpack
-python setup.py install
+cd backpack/test
+python benchmark_jacobian.py
 ```
