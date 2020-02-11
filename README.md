@@ -7,7 +7,7 @@ cd ~/backpack
 pip install -e .
 ```
 
-## Jacobian computation by BackPaCK vs for loop
+## Jacobian computation by BackPACK vs for loop
 ```bash
 cd backpack/test
 python benchmark_jacobian.py
