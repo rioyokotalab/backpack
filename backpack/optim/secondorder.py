@@ -1,5 +1,6 @@
 import torch
 from backpack import backpack
+from backpack.extensions import DiagGGN, DiagGGNMC, DiagGGNExact
 
 
 class SecondOrderOptimizer(torch.optim.Optimizer):
@@ -94,6 +95,10 @@ class SecondOrderOptimizer(torch.optim.Optimizer):
 
 
 class DiagGGNOptimizer(SecondOrderOptimizer):
+
+    def __init__(self, parameters, ext, *args, **kwargs):
+        assert isinstance(ext, (DiagGGN, DiagGGNMC, DiagGGNExact))
+        super().__init__(parameters, ext, *args, **kwargs)
 
     @staticmethod
     def precondition_grad(group):
