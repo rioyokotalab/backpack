@@ -2,8 +2,12 @@ import torch
 from backpack import backpack
 from backpack.extensions import DiagGGN, DiagGGNMC, DiagGGNExact, KFAC, KFRA, KFLR
 
+GGN_TYPE_MC = 'mc'
+GGN_TYPE_EXACT = 'exact'
+GGN_TYPE_RECURSIVE = 'recursive'
 
-class SecondOrderOptimizer(torch.optim.Optimizer):
+
+class _SecondOrderOptimizer(torch.optim.Optimizer):
 
     def __init__(self, parameters, ext,
                  lr=1e-3, damping=1e-5, curv_ema_decay=0.95, weight_decay=0, momentum=0):
@@ -94,10 +98,15 @@ class SecondOrderOptimizer(torch.optim.Optimizer):
             p.data.add_(-group['lr'], p.grad)
 
 
-class DiagGGNOptimizer(SecondOrderOptimizer):
+class DiagGGNOptimizer(_SecondOrderOptimizer):
 
-    def __init__(self, parameters, ext, *args, **kwargs):
-        assert isinstance(ext, (DiagGGN, DiagGGNMC, DiagGGNExact))
+    def __init__(self, parameters, ggn_type, *args, **kwargs):
+        if ggn_type == GGN_TYPE_MC:
+            ext = DiagGGNMC()
+        elif ggn_type == GGN_TYPE_EXACT:
+            ext = DiagGGNExact()
+        else:
+            ext = DiagGGN()
         super().__init__(parameters, ext, *args, **kwargs)
 
     @staticmethod
@@ -110,11 +119,16 @@ class DiagGGNOptimizer(SecondOrderOptimizer):
             p.grad.copy_(prec_grad)
 
 
-class KronGGNOptimizer(SecondOrderOptimizer):
+class KronGGNOptimizer(_SecondOrderOptimizer):
 
-    def __init__(self, parameters, ext, *args, tikhonov_damping=True, **kwargs):
-        assert isinstance(ext, (KFAC, KFRA, KFLR))
+    def __init__(self, parameters, ggn_type, *args, tikhonov_damping=True, **kwargs):
         self._tikhonov_damping = tikhonov_damping
+        if ggn_type == GGN_TYPE_EXACT:
+            ext = KFLR()
+        elif ggn_type == GGN_TYPE_RECURSIVE:
+            ext = KFRA()
+        else:
+            ext = KFAC()
         super().__init__(parameters, ext, *args, **kwargs)
 
     def precondition_grad(self, group):

@@ -18,8 +18,9 @@ WEIGHT_DECAY = 1e-3
 MAX_ITER = 100
 #OPTIM = 'DiagGGN'
 OPTIM = 'KronGGN'
-#HESSIAN_TYPE = 'mc'
-HESSIAN_TYPE = 'exact'
+#GGN_TYPE = 'mc'
+GGN_TYPE = 'exact'
+#GGN_TYPE = 'recursive'
 torch.manual_seed(0)
 
 
@@ -78,13 +79,9 @@ extend(model)
 extend(loss_function)
 
 if OPTIM == 'DiagGGN':
-    if HESSIAN_TYPE == 'exact':
-        ext = DiagGGNExact()
-    else:
-        ext = DiagGGNMC()
     optimizer = DiagGGNOptimizer(
         model.parameters(),
-        ext,
+        ggn_type=GGN_TYPE,
         lr=LR,
         damping=DAMPING,
         momentum=MOMENTUM,
@@ -92,13 +89,9 @@ if OPTIM == 'DiagGGN':
         curv_ema_decay=CURV_EMA_DECAY
     )
 elif OPTIM == 'KronGGN':
-    if HESSIAN_TYPE == 'exact':
-        ext = KFLR()
-    else:
-        ext = KFAC()
     optimizer = KronGGNOptimizer(
         model.parameters(),
-        ext,
+        ggn_type=GGN_TYPE,
         lr=LR,
         damping=DAMPING,
         momentum=MOMENTUM,
