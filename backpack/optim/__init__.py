@@ -1,1 +1,1 @@
-from .secondorder import SecondOrderOptimizer, DiagGGNOptimizer
+from .secondorder import SecondOrderOptimizer, DiagGGNOptimizer, KronGGNOptimizer

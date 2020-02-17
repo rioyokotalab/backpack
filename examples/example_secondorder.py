@@ -3,20 +3,23 @@ import torchvision
 # The main BackPACK functionalities
 from backpack import backpack, extend
 # The diagonal GGN extension
-from backpack.extensions import DiagGGNExact
+from backpack.extensions import *
 # This layer did not exist in Pytorch 1.0:w
 from backpack.core.layers import Flatten
-from backpack.optim import DiagGGNOptimizer
+from backpack.optim import DiagGGNOptimizer, KronGGNOptimizer
 
 # Hyperparameters
 BATCH_SIZE = 128
 LR = 1e-3
-DAMPING = 1e-4
+DAMPING = 1e-5
 CURV_EMA_DECAY = 0.95
 MOMENTUM = 0.9
 WEIGHT_DECAY = 1e-3
 MAX_ITER = 100
-OPTIM = 'DiagGGN'
+#OPTIM = 'DiagGGN'
+OPTIM = 'KronGGN'
+#HESSIAN_TYPE = 'mc'
+HESSIAN_TYPE = 'exact'
 torch.manual_seed(0)
 
 
@@ -73,11 +76,27 @@ create the optimizer, and we will be ready to go
 
 extend(model)
 extend(loss_function)
-ext = DiagGGNExact()
-
 
 if OPTIM == 'DiagGGN':
+    if HESSIAN_TYPE == 'exact':
+        ext = DiagGGNExact()
+    else:
+        ext = DiagGGNMC()
     optimizer = DiagGGNOptimizer(
+        model.parameters(),
+        ext,
+        lr=LR,
+        damping=DAMPING,
+        momentum=MOMENTUM,
+        weight_decay=WEIGHT_DECAY,
+        curv_ema_decay=CURV_EMA_DECAY
+    )
+elif OPTIM == 'KronGGN':
+    if HESSIAN_TYPE == 'exact':
+        ext = KFLR()
+    else:
+        ext = KFAC()
+    optimizer = KronGGNOptimizer(
         model.parameters(),
         ext,
         lr=LR,

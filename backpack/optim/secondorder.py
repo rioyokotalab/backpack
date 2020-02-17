@@ -1,6 +1,6 @@
 import torch
 from backpack import backpack
-from backpack.extensions import DiagGGN, DiagGGNMC, DiagGGNExact
+from backpack.extensions import DiagGGN, DiagGGNMC, DiagGGNExact, KFAC, KFRA, KFLR
 
 
 class SecondOrderOptimizer(torch.optim.Optimizer):
@@ -108,3 +108,52 @@ class DiagGGNOptimizer(SecondOrderOptimizer):
 
             prec_grad = p.grad / (p.ema + group['damping'])
             p.grad.copy_(prec_grad)
+
+
+class KronGGNOptimizer(SecondOrderOptimizer):
+
+    def __init__(self, parameters, ext, *args, tikhonov_damping=True, **kwargs):
+        assert isinstance(ext, (KFAC, KFRA, KFLR))
+        self._tikhonov_damping = tikhonov_damping
+        super().__init__(parameters, ext, *args, **kwargs)
+
+    def precondition_grad(self, group):
+        for p in group['params']:
+            if p.grad is None or getattr(p, 'ema', None) is None:
+                continue
+
+            assert isinstance(p.ema, list)
+            damping = group['damping']
+            B = p.ema[0]
+            if len(p.ema) > 1:
+                A = p.ema[1]
+
+                if self._tikhonov_damping:
+                    pi = torch.sqrt((A.trace()/A.shape[0])/(B.trace()/B.shape[0]))
+                else:
+                    pi = 1.
+                r = damping ** 0.5
+
+                B_inv = _inv(_add_value_to_diagonal(B, r/pi))
+                A_inv = _inv(_add_value_to_diagonal(A, r*pi))
+                grad2d = p.grad.view(B_inv.size(0), -1)
+                prec_grad = B_inv.mm(grad2d).mm(A_inv)
+            else:
+                B_inv = _inv(_add_value_to_diagonal(B, damping))
+                prec_grad = torch.matmul(B_inv, p.grad)
+
+            p.grad.copy_(prec_grad.reshape_as(p.grad))
+
+
+def _inv(X):
+    u = torch.cholesky(X)
+    return torch.cholesky_inverse(u)
+
+
+def _add_value_to_diagonal(X, value):
+    if torch.cuda.is_available():
+        indices = torch.cuda.LongTensor([[i, i] for i in range(X.shape[0])])
+    else:
+        indices = torch.LongTensor([[i, i] for i in range(X.shape[0])])
+    values = X.new_ones(X.shape[0]).mul(value)
+    return X.index_put(tuple(indices.t()), values, accumulate=True)
