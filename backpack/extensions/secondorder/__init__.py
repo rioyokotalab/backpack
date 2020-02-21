@@ -20,3 +20,21 @@ from .diag_ggn import DiagGGN, DiagGGNExact, DiagGGNMC, DiagGGNFR, DiagGGNExactF
 from .diag_hessian import DiagHessian
 from .hbp import HBP, KFAC, KFLR, KFRA, KFACEfficient, KFLREfficient, KFACFR, KFLRFR  # NOQA
 from .loss_hessian import LossHessian, LossHessianExact, LossHessianMC  # NOQA
+
+__all__ = [
+    "DiagGGN",
+    "DiagGGNExact",
+    "DiagGGNMC",
+    "DiagHessian",
+    "HBP",
+    "KFAC",
+    "KFLR",
+    "KFRA",
+    "KFACEfficient",
+    "KFLREfficient",
+    "KFACFR",
+    "KFLRFR",
+    "LossHessian",
+    "LossHessianExact",
+    "LossHessianMC",
+]
