@@ -5,6 +5,7 @@ import torch
 from .context import CTX
 from . import extensions
 
+
 class backpack():
     """
     Activates the BackPACK extensions passed as arguments for the
@@ -127,3 +128,6 @@ def extend(module, debug=False):
 
     setattr(module, "_backpack_extend", True)
     return module
+
+
+from . import optim
