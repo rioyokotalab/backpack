@@ -2,8 +2,8 @@ import torch
 from torch import nn
 
 from backpack import extend, backpack
-from backpack import extensions
 from backpack.extensions.secondorder import DiagGGN
+from backpack.extensions import FAIL_SILENT
 
 
 class LeNet(nn.Module):
@@ -43,6 +43,6 @@ bs = 10
 x = torch.randn(bs, 3, 32, 32)
 target = torch.randint(low=0, high=9, size=(bs,))
 
-with backpack(DiagGGN(fail_mode=extensions.FAIL_SILENT)):
+with backpack(DiagGGN(fail_mode=FAIL_SILENT)):
     loss = loss_fn(model(x), target)
     loss.backward()
