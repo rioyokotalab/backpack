@@ -21,6 +21,8 @@ from .secondorder import (
     LossHessian, LossHessianExact, LossHessianMC
 )
 
+from .backprop_extension import FAIL_ERROR, FAIL_WARN, FAIL_SILENT
+
 __all__ = [
     "CMP",
     "BatchL2Grad",
@@ -43,4 +45,7 @@ __all__ = [
     "LossHessian",
     "LossHessianExact",
     "LossHessianMC",
+    "FAIL_ERROR",
+    "FAIL_WARN",
+    "FAIL_SILENT",
 ]

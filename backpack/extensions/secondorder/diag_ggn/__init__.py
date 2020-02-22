@@ -15,6 +15,7 @@ from torch.nn import (
 
 from backpack.extensions.backprop_extension import BackpropExtension
 from backpack.extensions.secondorder.hbp import LossHessianStrategy
+from backpack.extensions import FAIL_ERROR
 
 from . import activations, conv2d, dropout, flatten, linear, losses, padding, pooling
 
@@ -25,7 +26,7 @@ class DiagGGN(BackpropExtension):
         LossHessianStrategy.SAMPLING,
     ]
 
-    def __init__(self, loss_hessian_strategy=LossHessianStrategy.EXACT, savefield=None):
+    def __init__(self, loss_hessian_strategy=LossHessianStrategy.EXACT, savefield=None, fail_mode=FAIL_ERROR):
         if savefield is None:
             savefield = "diag_ggn"
         if loss_hessian_strategy not in self.VALID_LOSS_HESSIAN_STRATEGIES:
@@ -37,7 +38,7 @@ class DiagGGN(BackpropExtension):
         self.loss_hessian_strategy = loss_hessian_strategy
         super().__init__(
             savefield=savefield,
-            fail_mode="ERROR",
+            fail_mode=fail_mode,
             module_exts={
                 MSELoss: losses.DiagGGNMSELoss(),
                 CrossEntropyLoss: losses.DiagGGNCrossEntropyLoss(),
@@ -68,9 +69,9 @@ class DiagGGNExact(DiagGGN):
 
     """
 
-    def __init__(self):
+    def __init__(self, fail_mode=FAIL_ERROR):
         super().__init__(
-            loss_hessian_strategy=LossHessianStrategy.EXACT, savefield="diag_ggn_exact"
+            loss_hessian_strategy=LossHessianStrategy.EXACT, savefield="diag_ggn_exact", fail_mode=fail_mode
         )
 
 
@@ -88,10 +89,10 @@ class DiagGGNMC(DiagGGN):
 
     """
 
-    def __init__(self, mc_samples=1):
+    def __init__(self, mc_samples=1, fail_mode=FAIL_ERROR):
         self._mc_samples = mc_samples
         super().__init__(
-            loss_hessian_strategy=LossHessianStrategy.SAMPLING, savefield="diag_ggn_mc"
+            loss_hessian_strategy=LossHessianStrategy.SAMPLING, savefield="diag_ggn_mc", fail_mode=fail_mode
         )
 
     def get_num_mc_samples(self):
@@ -106,7 +107,7 @@ class DiagGGNFR(BackpropExtension):
 
     def __init__(self,
                  loss_hessian_strategy=LossHessianStrategy.EXACT,
-                 savefield=None):
+                 savefield=None, fail_mode=FAIL_ERROR):
         if savefield is None:
             savefield = "diag_ggn"
         if loss_hessian_strategy not in self.VALID_LOSS_HESSIAN_STRATEGIES:
@@ -117,7 +118,7 @@ class DiagGGNFR(BackpropExtension):
 
         self.loss_hessian_strategy = loss_hessian_strategy
         super().__init__(savefield=savefield,
-                         fail_mode="ERROR",
+                         fail_mode=fail_mode,
                          module_exts={
                              MSELoss: losses.DiagGGNMSELoss(),
                              CrossEntropyLoss:
@@ -137,7 +138,7 @@ class DiagGGNFR(BackpropExtension):
 
 class DiagGGNExactFR(DiagGGNFR):
 
-    def __init__(self):
+    def __init__(self, fail_mode=FAIL_ERROR):
         super().__init__(loss_hessian_strategy=LossHessianStrategy.EXACT,
-                         savefield="diag_ggn_exact_fr")
+                         savefield="diag_ggn_exact_fr", fail_mode=fail_mode)
 

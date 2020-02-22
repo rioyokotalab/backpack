@@ -20,6 +20,7 @@ from backpack.extensions.secondorder.hbp.hbp_options import (
     ExpectationApproximation,
     LossHessianStrategy,
 )
+from backpack.extensions import FAIL_ERROR
 
 from . import activations, conv2d, dropout, flatten, linear, losses, padding, pooling
 
@@ -32,6 +33,7 @@ class HBP(BackpropExtension):
         backprop_strategy,
         ea_strategy,
         savefield="hbp",
+        fail_mode=FAIL_ERROR,
     ):
         self.curv_type = curv_type
         self.loss_hessian_strategy = loss_hessian_strategy
@@ -40,7 +42,7 @@ class HBP(BackpropExtension):
 
         super().__init__(
             savefield=savefield,
-            fail_mode="ERROR",
+            fail_mode=fail_mode,
             module_exts={
                 MSELoss: losses.HBPMSELoss(),
                 CrossEntropyLoss: losses.HBPCrossEntropyLoss(),
@@ -104,7 +106,7 @@ class KFAC(HBP):
       by Roger Grosse and James Martens, 2016
     """
 
-    def __init__(self, mc_samples=1):
+    def __init__(self, mc_samples=1, fail_mode=FAIL_ERROR):
         self._mc_samples = mc_samples
         super().__init__(
             curv_type=Curvature.GGN,
@@ -112,6 +114,7 @@ class KFAC(HBP):
             backprop_strategy=BackpropStrategy.SQRT,
             ea_strategy=ExpectationApproximation.BOTEV_MARTENS,
             savefield="kfac",
+            fail_mode=fail_mode
         )
 
     def get_num_mc_samples(self):
@@ -153,13 +156,14 @@ class KFRA(HBP):
       by Roger Grosse and James Martens, 2016
     """
 
-    def __init__(self):
+    def __init__(self, fail_mode=FAIL_ERROR):
         super().__init__(
             curv_type=Curvature.GGN,
             loss_hessian_strategy=LossHessianStrategy.SUM,
             backprop_strategy=BackpropStrategy.BATCH_AVERAGE,
             ea_strategy=ExpectationApproximation.BOTEV_MARTENS,
             savefield="kfra",
+            fail_mode=fail_mode
         )
 
 
@@ -199,19 +203,21 @@ class KFLR(HBP):
       by Roger Grosse and James Martens, 2016
     """
 
-    def __init__(self):
+    def __init__(self, fail_mode=FAIL_ERROR):
         super().__init__(
             curv_type=Curvature.GGN,
             loss_hessian_strategy=LossHessianStrategy.EXACT,
             backprop_strategy=BackpropStrategy.SQRT,
             ea_strategy=ExpectationApproximation.BOTEV_MARTENS,
             savefield="kflr",
+            fail_mode=fail_mode
         )
 
 
 class HBPEfficient(BackpropExtension):
 
-    def __init__(self, curv_type, loss_hessian_strategy, backprop_strategy, ea_strategy, savefield="hbp"):
+    def __init__(self, curv_type, loss_hessian_strategy, backprop_strategy, ea_strategy,
+                 savefield="hbp", fail_mode=FAIL_ERROR):
         self.curv_type = curv_type
         self.loss_hessian_strategy = loss_hessian_strategy
         self.backprop_strategy = backprop_strategy
@@ -219,7 +225,7 @@ class HBPEfficient(BackpropExtension):
 
         super().__init__(
             savefield=savefield,
-            fail_mode="ERROR",
+            fail_mode=fail_mode,
             module_exts={
                 MSELoss: losses.HBPMSELoss(),
                 CrossEntropyLoss: losses.HBPCrossEntropyLoss(),
@@ -251,31 +257,34 @@ class HBPEfficient(BackpropExtension):
 
 class KFACEfficient(HBPEfficient):
 
-    def __init__(self):
+    def __init__(self, fail_mode=FAIL_ERROR):
         super().__init__(
             curv_type=Curvature.GGN,
             loss_hessian_strategy=LossHessianStrategy.SAMPLING,
             backprop_strategy=BackpropStrategy.SQRT,
             ea_strategy=ExpectationApproximation.BOTEV_MARTENS,
-            savefield="kfac"
+            savefield="kfac",
+            fail_mode=fail_mode
         )
 
 
 class KFLREfficient(HBPEfficient):
 
-    def __init__(self):
+    def __init__(self, fail_mode=FAIL_ERROR):
         super().__init__(
             curv_type=Curvature.GGN,
             loss_hessian_strategy=LossHessianStrategy.EXACT,
             backprop_strategy=BackpropStrategy.SQRT,
             ea_strategy=ExpectationApproximation.BOTEV_MARTENS,
             savefield="kflr",
+            fail_mode=fail_mode
         )
 
 
 class HBPFR(BackpropExtension):
 
-    def __init__(self, curv_type, loss_hessian_strategy, backprop_strategy, ea_strategy, savefield="hbp"):
+    def __init__(self, curv_type, loss_hessian_strategy, backprop_strategy, ea_strategy,
+                 savefield="hbp", fail_mode=FAIL_ERROR):
         self.curv_type = curv_type
         self.loss_hessian_strategy = loss_hessian_strategy
         self.backprop_strategy = backprop_strategy
@@ -283,7 +292,7 @@ class HBPFR(BackpropExtension):
 
         super().__init__(
             savefield=savefield,
-            fail_mode="ERROR",
+            fail_mode=fail_mode,
             module_exts={
                 MSELoss: losses.HBPMSELoss(),
                 CrossEntropyLoss: losses.HBPCrossEntropyLoss(),
@@ -315,24 +324,26 @@ class HBPFR(BackpropExtension):
 
 class KFACFR(HBPFR):
 
-    def __init__(self):
+    def __init__(self, fail_mode=FAIL_ERROR):
         super().__init__(
             curv_type=Curvature.GGN,
             loss_hessian_strategy=LossHessianStrategy.SAMPLING,
             backprop_strategy=BackpropStrategy.SQRT,
             ea_strategy=ExpectationApproximation.BOTEV_MARTENS,
-            savefield="kfac"
+            savefield="kfac",
+            fail_mode=fail_mode
         )
 
 
 class KFLRFR(HBPFR):
 
-    def __init__(self):
+    def __init__(self, fail_mode=FAIL_ERROR):
         super().__init__(
             curv_type=Curvature.GGN,
             loss_hessian_strategy=LossHessianStrategy.EXACT,
             backprop_strategy=BackpropStrategy.SQRT,
             ea_strategy=ExpectationApproximation.BOTEV_MARTENS,
             savefield="kflr",
+            fail_mode=fail_mode
         )
 
