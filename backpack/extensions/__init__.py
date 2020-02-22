@@ -2,6 +2,7 @@
 BackPACK Extensions
 """
 
+from .backprop_extension import FAIL_ERROR, FAIL_WARN, FAIL_SILENT
 from .curvmatprod import CMP
 from .firstorder import BatchGrad, BatchL2Grad, SumGradSquared, Variance, Jacobian
 from .secondorder import (
@@ -20,8 +21,6 @@ from .secondorder import (
     DiagGGNFR, DiagGGNExactFR,
     LossHessian, LossHessianExact, LossHessianMC
 )
-
-from .backprop_extension import FAIL_ERROR, FAIL_WARN, FAIL_SILENT
 
 __all__ = [
     "CMP",
