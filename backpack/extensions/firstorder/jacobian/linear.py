@@ -1,4 +1,4 @@
-from backpack.core.derivatives.linear import LinearDerivatives, LinearConcatDerivatives
+from backpack.core.derivatives.linear import LinearDerivatives
 from .jacobian_base import JacobianBaseModule
 
 
