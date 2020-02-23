@@ -13,9 +13,23 @@ class SumGradSquared(BackpropExtension):
     Stores the output in :code:`sum_grad_squared`. Same dimension as the gradient.
     """
 
-    def __init__(self):
+    def __init__(self, loss_reduction="none"):
+
         super().__init__(
             savefield="sum_grad_squared",
             fail_mode="WARNING",
-            module_exts={Linear: linear.SGSLinear(), Conv2d: conv2d.SGSConv2d(),},
+            module_exts={Linear: linear.SGSLinear(loss_reduction),
+                         Conv2d: conv2d.SGSConv2d(loss_reduction),},
+        )
+
+
+class EmpKFAC(BackpropExtension):
+
+    def __init__(self, loss_reduction="none"):
+
+        super().__init__(
+            savefield="empkfac",
+            fail_mode="WARNING",
+            module_exts={Linear: linear.EmpKFACLinear(loss_reduction),
+                         Conv2d: conv2d.EmpKFACConv2d(loss_reduction),},
         )

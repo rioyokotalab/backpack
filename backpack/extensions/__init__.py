@@ -4,7 +4,7 @@ BackPACK Extensions
 
 from .backprop_extension import FAIL_ERROR, FAIL_WARN, FAIL_SILENT
 from .curvmatprod import CMP
-from .firstorder import BatchGrad, BatchL2Grad, SumGradSquared, Variance, Jacobian
+from .firstorder import BatchGrad, BatchL2Grad, SumGradSquared, EmpKFAC, Variance, Jacobian
 from .secondorder import (
     HBP,
     KFAC,
@@ -27,6 +27,7 @@ __all__ = [
     "BatchL2Grad",
     "BatchGrad",
     "SumGradSquared",
+    "EmpKFAC",
     "Variance",
     "Jacobian",
     "HBP",

@@ -14,8 +14,8 @@ backpropagated through the computational graph, such as
 
 from .batch_grad import BatchGrad
 from .batch_l2_grad import BatchL2Grad
-from .sum_grad_squared import SumGradSquared
+from .sum_grad_squared import SumGradSquared, EmpKFAC
 from .variance import Variance
 from .jacobian import Jacobian
 
-__all__ = ["BatchL2Grad", "BatchGrad", "SumGradSquared", "Variance", "Jacobian"]
+__all__ = ["BatchL2Grad", "BatchGrad", "SumGradSquared", "EmpKFAC", "Variance", "Jacobian"]
