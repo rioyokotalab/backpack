@@ -59,13 +59,20 @@ def compare(dsc, v1, v2):
     diff = v1 - v2
     max_diff = diff.abs().max()
     relative_diff = diff.norm() / v2.norm()
-    print(f'{dsc}\n max_diff: {max_diff}, relative_diff: {relative_diff}')
+    print('------')
+    print(f'{dsc}\n'
+          f'norm: {v1.norm()} vs {v2.norm()}\n'
+          f'max_diff: {max_diff}, relative_diff: {relative_diff}')
+
+
+def kronecker_product(A, B):
+    return torch.einsum("ab,cd->acbd", A, B).view(A.size(0)*B.size(0),  A.size(1)*B.size(1))
 
 
 for name, module in model.named_children():
     if len(list(module.parameters())) == 0:
         continue
-    print('------------')
+    print('################')
     print(name)
     for param in module.parameters():
         sum_grad_square = getattr(param, ext_sgs.savefield)
@@ -73,6 +80,15 @@ for name, module in model.named_children():
         mc_kron_factors = getattr(param, ext_mckfac.savefield)
         exact_kron_factors = getattr(param, ext_kflr.savefield)
         if len(emp_kron_factors) > 1:
+            grad_batch = getattr(param, ext_bg.savefield)
+            compare('grad_batch.sum() vs grad', grad_batch.sum(0), param.grad)
+
+            if loss_fn.reduction == 'mean':
+                grad_batch *= bs
+
+            grad_batch_squre = grad_batch ** 2
+            compare('grad_batch**2.sum() vs sum_grad_square', grad_batch_squre.sum(0), sum_grad_square)
+
             A_emp = emp_kron_factors[1]
             A_mc = mc_kron_factors[1]
             A_exact = exact_kron_factors[1]
@@ -88,12 +104,12 @@ for name, module in model.named_children():
             diag_B = torch.diag(B_emp)
             diag_A = torch.diag(A_emp)
             kron_sum_grad_square = torch.einsum('i,j->ij', diag_B, diag_A).view_as(param.grad)
-            compare('diag(empkfac) vs empdiag', kron_sum_grad_square, sum_grad_square.div(bs))
+            compare('diag(kron_F_emp) vs diag_F_emp', kron_sum_grad_square, sum_grad_square.div(bs))
 
-            grad_batch = getattr(param, ext_bg.savefield)
-            compare('grad_batch.sum() vs grad', grad_batch.sum(0), param.grad)
+            grad_batch = grad_batch.flatten(start_dim=1)
+            emp_F = torch.einsum('ni,nj->ij', grad_batch, grad_batch).div(bs)
+            kron_emp_F = kronecker_product(B_emp, A_emp)
+            compare('kron_F_emp vs F_emp', kron_emp_F, emp_F)
 
-            grad_batch *= bs
-            grad_batch_squre = grad_batch ** 2
-            compare('grad_batch**2.sum() vs sum_grad_square', grad_batch_squre.sum(0), sum_grad_square)
+            compare('diag_F_emp vs diag(F_emp)', sum_grad_square.div(bs).flatten(), torch.diag(emp_F))
 
